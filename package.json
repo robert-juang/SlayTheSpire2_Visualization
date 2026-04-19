@@ -1,0 +1,80 @@
+{
+  "name": "slaythespire2-visualization",
+  "version": "1.0.0",
+  "description": "Slay the Spire 2 team run data visualizer for macOS.",
+  "main": "dist/main/main/electron.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "predev": "tsc -p tsconfig.main.json",
+    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:main\"",
+    "dev:renderer": "vite",
+    "dev:main": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
+    "build": "npm run build:renderer && tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit",
+    "lint": "eslint .",
+    "prestart": "tsc -p tsconfig.main.json",
+    "start": "electron .",
+    "package": "npm run build && electron-builder --mac"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robert-juang/SlayTheSpire2_Visualization.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/robert-juang/SlayTheSpire2_Visualization/issues"
+  },
+  "homepage": "https://github.com/robert-juang/SlayTheSpire2_Visualization#readme",
+  "private": true,
+  "dependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "better-sqlite3": "^12.9.0",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
+    "electron-log": "^5.4.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.8",
+    "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.sts2.visualizer",
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        "dmg"
+      ]
+    },
+    "files": [
+      "dist/**",
+      "dist-renderer/**",
+      "node_modules/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  }
+}

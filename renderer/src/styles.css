@@ -1,0 +1,134 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #111827;
+  color: #f3f4f6;
+}
+
+.container {
+  padding: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+button {
+  border: 1px solid #374151;
+  background: #1f2937;
+  color: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.active {
+  background: #2563eb;
+}
+
+.page {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.source-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+input {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #f3f4f6;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.profile-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  background: #111827;
+}
+
+.loading-page {
+  text-align: center;
+  max-width: 640px;
+  margin: 80px auto 0;
+}
+
+.loading-icon {
+  font-size: 52px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #374151;
+  background: #111827;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #2563eb;
+  transition: width 220ms ease;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  border: 1px solid #1f2937;
+  background: #111827;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.metric-label {
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 24px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #1f2937;
+  text-align: left;
+  padding: 8px;
+}
