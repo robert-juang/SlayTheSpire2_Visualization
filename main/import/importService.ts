@@ -118,19 +118,20 @@ export class ImportService {
         )
         .run(
           playerId,
-          parsed.raw.timestamp,
-          parsed.raw.character,
-          parsed.raw.ascension,
-          parsed.raw.victory ? 1 : 0,
-          parsed.raw.floor_reached,
-          parsed.raw.seed,
-          parsed.raw.duration,
+          parsed.normalized.timestamp,
+          parsed.normalized.character,
+          parsed.normalized.ascension,
+          parsed.normalized.victory ? 1 : 0,
+          parsed.normalized.floorReached,
+          parsed.normalized.seed,
+          parsed.normalized.durationSeconds,
           parsed.sourceHash,
           parsed.sourcePath,
           Date.now()
         );
 
       const runId = Number(runInsert.lastInsertRowid);
+      this.insertRunMetadata(runId, parsed);
       this.insertRunChildren(runId, parsed);
     });
 
@@ -193,6 +194,9 @@ export class ImportService {
     const insertCard = this.db.prepare(
       "INSERT INTO run_cards (run_id, floor, card_id, action) VALUES (?, ?, ?, ?)"
     );
+    for (const cardId of parsed.metadata.deckCards) {
+      insertCard.run(runId, null, cardId, "final_deck");
+    }
     for (const cardChoice of parsed.raw.card_choices ?? []) {
       insertCard.run(runId, cardChoice.floor, cardChoice.picked, "picked");
       for (const ignored of cardChoice.not_picked ?? []) {
@@ -203,6 +207,9 @@ export class ImportService {
     const insertRelic = this.db.prepare(
       "INSERT INTO run_relics (run_id, floor, relic_id, action) VALUES (?, ?, ?, ?)"
     );
+    for (const relicId of parsed.metadata.relics) {
+      insertRelic.run(runId, null, relicId, "final_relic");
+    }
     for (const relic of parsed.raw.relics_obtained ?? []) {
       insertRelic.run(runId, relic.floor, relic.key, "obtained");
     }
@@ -215,5 +222,53 @@ export class ImportService {
       const act = floor <= 17 ? 1 : floor <= 34 ? 2 : 3;
       insertPath.run(runId, floor, nodeType, act);
     }
+
+    let syntheticFloor = 1;
+    for (const actSummary of parsed.metadata.actSummaries) {
+      for (const enemy of actSummary.enemies) {
+        insertPath.run(runId, syntheticFloor, enemy, actSummary.act);
+        syntheticFloor += 1;
+      }
+    }
+  }
+
+  private insertRunMetadata(runId: number, parsed: ParsedRun) {
+    const metadata = parsed.metadata;
+    this.db
+      .prepare(
+        `INSERT INTO run_metadata (
+          run_id, file_name, was_abandoned, game_mode, build_id, platform_type, schema_version,
+          killed_by_encounter, killed_by_event, num_acts, acts_json, deck_size, deck_cards_json,
+          unique_deck_cards, upgraded_cards_json, num_upgraded_cards, relic_count, relics_json,
+          unique_relics, enemy_count, enemies_encountered_json, unique_enemy_count,
+          unique_enemies_json, act_summary_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        runId,
+        metadata.fileName,
+        metadata.wasAbandoned ? 1 : 0,
+        metadata.gameMode ?? null,
+        metadata.buildId ?? null,
+        metadata.platformType ?? null,
+        metadata.schemaVersion ?? null,
+        metadata.killedByEncounter ?? null,
+        metadata.killedByEvent ?? null,
+        metadata.numActs,
+        JSON.stringify(metadata.acts),
+        metadata.deckSize,
+        JSON.stringify(metadata.deckCards),
+        metadata.uniqueDeckCards,
+        JSON.stringify(metadata.upgradedCards),
+        metadata.numUpgradedCards,
+        metadata.relicCount,
+        JSON.stringify(metadata.relics),
+        metadata.uniqueRelics,
+        metadata.enemyCount,
+        JSON.stringify(metadata.enemiesEncountered),
+        metadata.uniqueEnemyCount,
+        JSON.stringify(metadata.uniqueEnemies),
+        JSON.stringify(metadata.actSummaries)
+      );
   }
 }

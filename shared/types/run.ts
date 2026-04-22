@@ -11,18 +11,83 @@ export type ProfileCandidate = {
 };
 
 export type RawRun = {
-  timestamp: number;
-  character: string;
-  ascension: number;
-  victory: boolean;
-  floor_reached: number;
-  seed: string;
-  duration: number;
+  timestamp?: number;
+  start_time?: number;
+  character?: string;
+  ascension?: number;
+  victory?: boolean;
+  win?: boolean;
+  was_abandoned?: boolean;
+  floor_reached?: number;
+  seed?: string | number;
+  duration?: number;
+  run_time?: number;
+  game_mode?: string;
+  build_id?: string | number;
+  platform_type?: string;
+  schema_version?: string | number;
+  killed_by_encounter?: string;
+  killed_by_event?: string;
+  acts?: string[];
+  players?: Array<{
+    character?: string;
+    deck?: Array<{ id?: string; current_upgrade_level?: number }>;
+    relics?: Array<{ id?: string }>;
+    [key: string]: unknown;
+  }>;
+  map_point_history?: Array<Array<{ rooms?: Array<{ model_id?: string }> }>>;
   path_per_floor?: string[];
   card_choices?: Array<{ floor: number; picked: string; not_picked?: string[] }>;
   relics_obtained?: Array<{ floor: number; key: string }>;
   event_choices?: Array<{ floor?: number; event_name?: string; [key: string]: unknown }>;
   [key: string]: unknown;
+};
+
+export type NormalizedRun = {
+  timestamp: number;
+  character: string;
+  ascension: number;
+  victory: boolean;
+  floorReached: number;
+  seed: string;
+  durationSeconds: number;
+};
+
+export type RunActSummary = {
+  act: number;
+  name?: string;
+  enemyCount: number;
+  enemies: string[];
+  uniqueEnemies: string[];
+};
+
+export type RunMetadata = {
+  fileName: string;
+  startTime?: number;
+  runTimeSeconds: number;
+  win: boolean;
+  wasAbandoned: boolean;
+  gameMode?: string;
+  buildId?: string;
+  platformType?: string;
+  schemaVersion?: string;
+  killedByEncounter?: string;
+  killedByEvent?: string;
+  numActs: number;
+  acts: string[];
+  deckSize: number;
+  deckCards: string[];
+  uniqueDeckCards: number;
+  upgradedCards: string[];
+  numUpgradedCards: number;
+  relicCount: number;
+  relics: string[];
+  uniqueRelics: number;
+  enemyCount: number;
+  enemiesEncountered: string[];
+  uniqueEnemyCount: number;
+  uniqueEnemies: string[];
+  actSummaries: RunActSummary[];
 };
 
 export type ParsedRun = {
@@ -31,6 +96,8 @@ export type ParsedRun = {
   sourcePath: string;
   sourceHash: string;
   raw: RawRun;
+  normalized: NormalizedRun;
+  metadata: RunMetadata;
 };
 
 export type ImportPreviewResult = {
@@ -55,6 +122,13 @@ export type PlayerComparisonRow = {
   averageFloor: number;
 };
 
+export type CharacterAscensionWinRateRow = {
+  character: string;
+  ascension: number;
+  runCount: number;
+  winRate: number;
+};
+
 export type RunListItem = {
   id: string;
   playerName: string;
@@ -64,4 +138,9 @@ export type RunListItem = {
   victory: number;
   floorReached: number;
   durationSeconds: number;
+  deckSize: number;
+  relicCount: number;
+  enemyCount: number;
+  uniqueEnemyCount: number;
+  killedByEncounter?: string;
 };

@@ -41,6 +41,10 @@ export const registerRunIpcHandlers = (services: AppServices) => {
     return services.analyticsRepository.getPlayerComparison();
   });
 
+  ipcMain.handle("analytics:winrate-by-ascension", () => {
+    return services.analyticsRepository.getWinRateByAscension();
+  });
+
   ipcMain.handle("analytics:runs", (_, filters?: RunSummaryFilters) => {
     return services.analyticsRepository.getRuns(filters);
   });

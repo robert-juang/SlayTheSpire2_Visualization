@@ -57,6 +57,34 @@ CREATE TABLE IF NOT EXISTS run_path (
   FOREIGN KEY(run_id) REFERENCES runs(id)
 );
 
+CREATE TABLE IF NOT EXISTS run_metadata (
+  run_id INTEGER PRIMARY KEY,
+  file_name TEXT NOT NULL,
+  was_abandoned INTEGER NOT NULL,
+  game_mode TEXT,
+  build_id TEXT,
+  platform_type TEXT,
+  schema_version TEXT,
+  killed_by_encounter TEXT,
+  killed_by_event TEXT,
+  num_acts INTEGER NOT NULL,
+  acts_json TEXT NOT NULL,
+  deck_size INTEGER NOT NULL,
+  deck_cards_json TEXT NOT NULL,
+  unique_deck_cards INTEGER NOT NULL,
+  upgraded_cards_json TEXT NOT NULL,
+  num_upgraded_cards INTEGER NOT NULL,
+  relic_count INTEGER NOT NULL,
+  relics_json TEXT NOT NULL,
+  unique_relics INTEGER NOT NULL,
+  enemy_count INTEGER NOT NULL,
+  enemies_encountered_json TEXT NOT NULL,
+  unique_enemy_count INTEGER NOT NULL,
+  unique_enemies_json TEXT NOT NULL,
+  act_summary_json TEXT NOT NULL,
+  FOREIGN KEY(run_id) REFERENCES runs(id)
+);
+
 CREATE TABLE IF NOT EXISTS import_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   started_at INTEGER NOT NULL,

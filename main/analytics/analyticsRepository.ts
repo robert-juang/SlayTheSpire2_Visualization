@@ -1,6 +1,11 @@
 import type Database from "better-sqlite3";
 import type { RunSummaryFilters } from "../../shared/types/ipc.js";
-import type { OverviewMetrics, PlayerComparisonRow, RunListItem } from "../../shared/types/run.js";
+import type {
+  CharacterAscensionWinRateRow,
+  OverviewMetrics,
+  PlayerComparisonRow,
+  RunListItem
+} from "../../shared/types/run.js";
 
 const buildFilterSql = (filters?: RunSummaryFilters) => {
   const where: string[] = [];
@@ -78,6 +83,21 @@ export class AnalyticsRepository {
       .all() as PlayerComparisonRow[];
   }
 
+  getWinRateByAscension(): CharacterAscensionWinRateRow[] {
+    return this.db
+      .prepare(
+        `SELECT
+          r.character AS character,
+          r.ascension AS ascension,
+          COUNT(*) AS runCount,
+          AVG(CAST(r.victory AS REAL)) AS winRate
+        FROM runs r
+        GROUP BY r.character, r.ascension
+        ORDER BY r.ascension ASC, r.character ASC`
+      )
+      .all() as CharacterAscensionWinRateRow[];
+  }
+
   getRuns(filters?: RunSummaryFilters): RunListItem[] {
     const { clause, params } = buildFilterSql(filters);
     return this.db
@@ -90,9 +110,15 @@ export class AnalyticsRepository {
           r.ascension AS ascension,
           r.victory AS victory,
           r.floor_reached AS floorReached,
-          r.duration_s AS durationSeconds
+          r.duration_s AS durationSeconds,
+          COALESCE(m.deck_size, 0) AS deckSize,
+          COALESCE(m.relic_count, 0) AS relicCount,
+          COALESCE(m.enemy_count, 0) AS enemyCount,
+          COALESCE(m.unique_enemy_count, 0) AS uniqueEnemyCount,
+          m.killed_by_encounter AS killedByEncounter
         FROM runs r
         JOIN players p ON p.id = r.player_id
+        LEFT JOIN run_metadata m ON m.run_id = r.id
         ${clause}
         ORDER BY r.run_timestamp DESC
         LIMIT 500`

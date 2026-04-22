@@ -6,6 +6,7 @@ import type {
   RunSummaryFilters
 } from "../shared/types/ipc.js";
 import type {
+  CharacterAscensionWinRateRow,
   ImportPreviewResult,
   OverviewMetrics,
   ProfileCandidate,
@@ -27,6 +28,8 @@ const api = {
     ipcRenderer.invoke("analytics:overview", filters ?? {}),
   getPlayerComparison: (): Promise<PlayerComparisonRow[]> =>
     ipcRenderer.invoke("analytics:players"),
+  getWinRateByAscension: (): Promise<CharacterAscensionWinRateRow[]> =>
+    ipcRenderer.invoke("analytics:winrate-by-ascension"),
   getRuns: (filters?: RunSummaryFilters): Promise<RunListItem[]> =>
     ipcRenderer.invoke("analytics:runs", filters ?? {})
 };

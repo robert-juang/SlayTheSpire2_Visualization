@@ -48,7 +48,7 @@ export const App = () => {
   });
 
   const headerText = useMemo(() => {
-    if (stage === "ready") return "Slay the Spire 2 Team Visualizer";
+    if (stage === "ready") return "Slay the Spire 2 Visualizer";
     return "Slay the Spire 2 Data Loader";
   }, [stage]);
 
