@@ -11,6 +11,7 @@ import type {
   OverviewMetrics,
   ProfileCandidate,
   PlayerComparisonRow,
+  RunDetail,
   RunListItem
 } from "../shared/types/run.js";
 
@@ -31,7 +32,9 @@ const api = {
   getWinRateByAscension: (): Promise<CharacterAscensionWinRateRow[]> =>
     ipcRenderer.invoke("analytics:winrate-by-ascension"),
   getRuns: (filters?: RunSummaryFilters): Promise<RunListItem[]> =>
-    ipcRenderer.invoke("analytics:runs", filters ?? {})
+    ipcRenderer.invoke("analytics:runs", filters ?? {}),
+  getRunDetail: (runId: string): Promise<RunDetail | null> =>
+    ipcRenderer.invoke("analytics:run-detail", runId)
 };
 
 contextBridge.exposeInMainWorld("sts2Api", api);

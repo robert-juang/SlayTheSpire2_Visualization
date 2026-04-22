@@ -48,4 +48,8 @@ export const registerRunIpcHandlers = (services: AppServices) => {
   ipcMain.handle("analytics:runs", (_, filters?: RunSummaryFilters) => {
     return services.analyticsRepository.getRuns(filters);
   });
+
+  ipcMain.handle("analytics:run-detail", (_, runId: string) => {
+    return services.analyticsRepository.getRunDetail(runId);
+  });
 };

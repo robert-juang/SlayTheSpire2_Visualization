@@ -144,3 +144,26 @@ export type RunListItem = {
   uniqueEnemyCount: number;
   killedByEncounter?: string;
 };
+
+export type RunDetailEvent = {
+  act: number;
+  floor: number;
+  eventId: string;
+  results: string[];
+};
+
+export type RunDetail = {
+  id: string;
+  sourceFile: string;
+  seed: string;
+  cardsUsed: string[];
+  relicsObtained: string[];
+  goldGained: number;
+  goldSpent: number;
+  goldLost: number;
+  goldStolen: number;
+  finalGold?: number;
+  normalEnemies: string[];
+  elites: string[];
+  events: RunDetailEvent[];
+};

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
 
@@ -94,9 +94,15 @@ const sortOptions = (values: string[]) =>
 
 export const RunExplorerPage = () => {
   const [filters, setFilters] = useState<FilterState>({});
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["runs"],
     queryFn: () => window.sts2Api.getRuns()
+  });
+  const { data: expandedRunDetail, isLoading: isDetailLoading } = useQuery({
+    queryKey: ["run-detail", expandedRunId],
+    queryFn: () => window.sts2Api.getRunDetail(expandedRunId ?? ""),
+    enabled: Boolean(expandedRunId)
   });
 
   const runs = data ?? [];
@@ -155,11 +161,75 @@ export const RunExplorerPage = () => {
         </thead>
         <tbody>
           {filteredRuns.map((run) => (
-            <tr key={run.id}>
-              {columns.map((column) => (
-                <td key={column.key}>{column.render(run)}</td>
-              ))}
-            </tr>
+            <Fragment key={run.id}>
+              <tr
+                className="run-row"
+                onClick={() => setExpandedRunId((current) => (current === run.id ? null : run.id))}
+              >
+                {columns.map((column) => (
+                  <td key={column.key}>{column.render(run)}</td>
+                ))}
+              </tr>
+              {expandedRunId === run.id ? (
+                <tr className="run-detail-row" key={`${run.id}-detail`}>
+                  <td colSpan={columns.length}>
+                    {isDetailLoading ? (
+                      <div className="run-detail-panel">Loading run details...</div>
+                    ) : expandedRunDetail ? (
+                      <div className="run-detail-panel">
+                        <div className="detail-group">
+                          <h3>Cards Used</h3>
+                          <div className="detail-list">{expandedRunDetail.cardsUsed.join(", ") || "None recorded"}</div>
+                        </div>
+                        <div className="detail-group">
+                          <h3>Relics Obtained</h3>
+                          <div className="detail-list">
+                            {expandedRunDetail.relicsObtained.join(", ") || "None recorded"}
+                          </div>
+                        </div>
+                        <div className="detail-group">
+                          <h3>Gold</h3>
+                          <div className="detail-list">
+                            Gained {expandedRunDetail.goldGained} | Spent {expandedRunDetail.goldSpent} | Lost{" "}
+                            {expandedRunDetail.goldLost} | Stolen {expandedRunDetail.goldStolen} | Final{" "}
+                            {expandedRunDetail.finalGold ?? "Unknown"}
+                          </div>
+                        </div>
+                        <div className="detail-group">
+                          <h3>Normal Enemies</h3>
+                          <div className="detail-list">
+                            {expandedRunDetail.normalEnemies.join(", ") || "None recorded"}
+                          </div>
+                        </div>
+                        <div className="detail-group">
+                          <h3>Elites</h3>
+                          <div className="detail-list">{expandedRunDetail.elites.join(", ") || "None recorded"}</div>
+                        </div>
+                        <div className="detail-group detail-group-wide">
+                          <h3>Events</h3>
+                          {expandedRunDetail.events.length > 0 ? (
+                            <div className="event-list">
+                              {expandedRunDetail.events.map((event) => (
+                                <div className="event-item" key={`${event.act}-${event.floor}-${event.eventId}`}>
+                                  <strong>
+                                    Act {event.act}, Floor {event.floor}: {event.eventId}
+                                  </strong>
+                                  <span>{event.results.join(" | ")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="detail-list">None recorded</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="run-detail-panel">Run details unavailable.</div>
+                    )}
+                  </td>
+                </tr>
+              ) : null}
+            </Fragment>
           ))}
         </tbody>
       </table>
