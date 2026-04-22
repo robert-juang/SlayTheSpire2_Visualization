@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
 
 type FilterKey =
+  | "id"
   | "character"
   | "ascension"
   | "victory"
@@ -22,6 +23,12 @@ const columns: Array<{
   render: (run: RunListItem) => string | number;
 }> = [
   {
+    key: "id",
+    label: "Run ID",
+    value: (run) => run.id,
+    render: (run) => run.id
+  },
+  {
     key: "character",
     label: "Character",
     value: (run) => run.character,
@@ -29,7 +36,7 @@ const columns: Array<{
   },
   {
     key: "ascension",
-    label: "A",
+    label: "Asc",
     value: (run) => String(run.ascension),
     render: (run) => run.ascension
   },
@@ -114,10 +121,9 @@ export const RunExplorerPage = () => {
 
   return (
     <section className="page">
-      <h2>Run Explorer</h2>
-      <div className="run-count">
+      {/* <div className="run-count">
         Showing {filteredRuns.length} of {runs.length} runs
-      </div>
+      </div> */}
       <table>
         <thead>
           <tr>
