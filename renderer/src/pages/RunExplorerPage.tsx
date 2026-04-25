@@ -1,44 +1,49 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
+import { getCharacterIconUrl } from "../assets/characterIconMap";
 
-type FilterKey =
-  | "id"
-  | "character"
-  | "ascension"
-  | "victory"
-  | "floorReached"
-  | "deckSize"
-  | "relicCount"
-  | "enemyCount"
-  | "killedByEncounter"
-  | "durationMinutes";
-
-type FilterState = Partial<Record<FilterKey, string>>;
+type SortDirection = "asc" | "desc";
+type SortKey = "id" | "ascension" | "floorReached" | "durationMinutes";
 
 const columns: Array<{
-  key: FilterKey;
+  key: string;
   label: string;
   value: (run: RunListItem) => string;
-  render: (run: RunListItem) => string | number;
+  render: (run: RunListItem) => React.ReactNode;
+  sortValue?: (run: RunListItem) => number;
 }> = [
   {
     key: "id",
-    label: "Run ID",
+    label: "#",
     value: (run) => run.id,
-    render: (run) => run.id
+    render: (run) => run.id,
+    sortValue: (run) => Number(run.id)
   },
   {
     key: "character",
     label: "Character",
     value: (run) => run.character,
-    render: (run) => run.character
+    render: (run) => {
+      const iconUrl = getCharacterIconUrl(run.character);
+      return iconUrl ? (
+        <img
+          className="character-icon"
+          src={iconUrl}
+          alt={run.character}
+          title={run.character}
+        />
+      ) : (
+        run.character
+      );
+    }
   },
   {
     key: "ascension",
     label: "Asc",
     value: (run) => String(run.ascension),
-    render: (run) => run.ascension
+    render: (run) => run.ascension,
+    sortValue: (run) => run.ascension
   },
   {
     key: "victory",
@@ -50,25 +55,8 @@ const columns: Array<{
     key: "floorReached",
     label: "Floor",
     value: (run) => String(run.floorReached),
-    render: (run) => run.floorReached
-  },
-  {
-    key: "deckSize",
-    label: "Deck",
-    value: (run) => String(run.deckSize),
-    render: (run) => run.deckSize
-  },
-  {
-    key: "relicCount",
-    label: "Relics",
-    value: (run) => String(run.relicCount),
-    render: (run) => run.relicCount
-  },
-  {
-    key: "enemyCount",
-    label: "Enemies",
-    value: (run) => String(run.enemyCount),
-    render: (run) => run.enemyCount
+    render: (run) => run.floorReached,
+    sortValue: (run) => run.floorReached
   },
   {
     key: "killedByEncounter",
@@ -80,7 +68,8 @@ const columns: Array<{
     key: "durationMinutes",
     label: "Duration (m)",
     value: (run) => String(Math.round(run.durationSeconds / 60)),
-    render: (run) => Math.round(run.durationSeconds / 60)
+    render: (run) => Math.round(run.durationSeconds / 60),
+    sortValue: (run) => Math.round(run.durationSeconds / 60)
   }
 ];
 
@@ -126,12 +115,21 @@ const TypingText = ({ text }: { text: string }) => {
 };
 
 export const RunExplorerPage = () => {
-  const [filters, setFilters] = useState<FilterState>({});
+  const [selectedCharacter, setSelectedCharacter] = useState("");
+  const [selectedAscension, setSelectedAscension] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [requestedAnalysisIds, setRequestedAnalysisIds] = useState<Record<string, boolean>>({});
   const { data, isLoading } = useQuery({
     queryKey: ["runs"],
     queryFn: () => window.sts2Api.getRuns(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+  const { data: appConfig } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => window.sts2Api.getConfig(),
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
@@ -174,7 +172,7 @@ export const RunExplorerPage = () => {
   });
 
   useEffect(() => {
-    if (!expandedRunId) return;
+    if (!expandedRunId || appConfig?.allowExternalAiCalls === false) return;
     setRequestedAnalysisIds((current) => {
       if (current[expandedRunId]) return current;
       return {
@@ -182,58 +180,94 @@ export const RunExplorerPage = () => {
         [expandedRunId]: true
       };
     });
-  }, [expandedRunId]);
+  }, [appConfig?.allowExternalAiCalls, expandedRunId]);
 
   const runs = data ?? [];
-  const filterOptions = useMemo(() => {
-    const options = new Map<FilterKey, string[]>();
-    for (const column of columns) {
-      options.set(column.key, sortOptions([...new Set(runs.map(column.value))]));
-    }
-    return options;
-  }, [runs]);
+  const characterOptions = useMemo(
+    () => sortOptions([...new Set(runs.map((run) => run.character))]),
+    [runs]
+  );
+  const ascensionOptions = useMemo(
+    () => sortOptions([...new Set(runs.map((run) => String(run.ascension)))]),
+    [runs]
+  );
 
   const filteredRuns = useMemo(() => {
-    return runs.filter((run) =>
-      columns.every((column) => {
-        const filterValue = filters[column.key];
-        return !filterValue || column.value(run) === filterValue;
-      })
-    );
-  }, [filters, runs]);
+    const nextRuns = runs.filter((run) => {
+      if (selectedCharacter && run.character !== selectedCharacter) return false;
+      if (selectedAscension && String(run.ascension) !== selectedAscension) return false;
+      return true;
+    });
+
+    if (!sortKey) return nextRuns;
+
+    const sortedRuns = [...nextRuns];
+    const sortColumn = columns.find((column) => column.key === sortKey);
+    if (!sortColumn?.sortValue) return nextRuns;
+
+    sortedRuns.sort((left, right) => {
+      const leftValue = sortColumn.sortValue?.(left) ?? 0;
+      const rightValue = sortColumn.sortValue?.(right) ?? 0;
+      return sortDirection === "asc" ? leftValue - rightValue : rightValue - leftValue;
+    });
+
+    return sortedRuns;
+  }, [runs, selectedAscension, selectedCharacter, sortDirection, sortKey]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection("desc");
+  };
 
   if (isLoading) return <section className="page">Loading runs...</section>;
 
   return (
     <section className="page">
-      {/* <div className="run-count">
-        Showing {filteredRuns.length} of {runs.length} runs
-      </div> */}
+      <div className="run-explorer-toolbar">
+        <label className="toolbar-filter">
+          <span>Character</span>
+          <select value={selectedCharacter} onChange={(event) => setSelectedCharacter(event.target.value)}>
+            <option value="">All Characters</option>
+            {characterOptions.map((character) => (
+              <option key={character} value={character}>
+                {character}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="toolbar-filter">
+          <span>Ascension</span>
+          <select value={selectedAscension} onChange={(event) => setSelectedAscension(event.target.value)}>
+            <option value="">All Ascensions</option>
+            {ascensionOptions.map((ascension) => (
+              <option key={ascension} value={ascension}>
+                {ascension}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="run-explorer-table-wrap">
         <table className="run-explorer-table">
           <thead>
             <tr>
               {columns.map((column) => (
                 <th key={column.key}>
-                  <div className="column-filter">
+                  <div className="column-header">
                     <span>{column.label}</span>
-                    <select
-                      aria-label={`Filter ${column.label}`}
-                      value={filters[column.key] ?? ""}
-                      onChange={(event) =>
-                        setFilters((current) => ({
-                          ...current,
-                          [column.key]: event.target.value || undefined
-                        }))
-                      }
-                    >
-                      <option value="">All</option>
-                      {(filterOptions.get(column.key) ?? []).map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                    {column.sortValue ? (
+                      <button
+                        className={`sort-button ${sortKey === column.key ? "sort-button-active" : ""}`}
+                        onClick={() => toggleSort(column.key as SortKey)}
+                        title={`Sort ${column.label} ${sortKey === column.key && sortDirection === "asc" ? "descending" : "ascending"}`}
+                      >
+                        {sortKey === column.key ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                      </button>
+                    ) : null}
                   </div>
                 </th>
               ))}
@@ -266,9 +300,12 @@ export const RunExplorerPage = () => {
                               <h3>AI Analysis</h3>
                               <button
                                 className="detail-action-button"
-                                disabled={isAnalysisLoading}
+                                disabled={isAnalysisLoading || appConfig?.allowExternalAiCalls === false}
                                 onClick={(event) => {
                                   event.stopPropagation();
+                                  if (appConfig?.allowExternalAiCalls === false) {
+                                    return;
+                                  }
                                   if (requestedAnalysisIds[run.id]) {
                                     void refetchRunAnalysis();
                                     return;
@@ -279,14 +316,20 @@ export const RunExplorerPage = () => {
                                   }));
                                 }}
                               >
-                                {isAnalysisLoading
-                                  ? "loading..."
-                                  : requestedAnalysisIds[run.id]
-                                    ? "Regenerate Analysis"
-                                    : "Generate AI Analysis"}
+                                {appConfig?.allowExternalAiCalls === false
+                                  ? "AI Disabled"
+                                  : isAnalysisLoading
+                                    ? "loading..."
+                                    : requestedAnalysisIds[run.id]
+                                      ? "Regenerate Analysis"
+                                      : "Generate AI Analysis"}
                               </button>
                             </div>
-                            {!requestedAnalysisIds[run.id] ? (
+                            {appConfig?.allowExternalAiCalls === false ? (
+                              <div className="detail-list">
+                                External AI API calls are disabled in Config.
+                              </div>
+                            ) : !requestedAnalysisIds[run.id] ? (
                               <div className="detail-list">
                                 Generate an OpenAI summary for this run from the structured run JSON.
                               </div>

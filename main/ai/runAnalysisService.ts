@@ -1,5 +1,6 @@
 import type { AnalyticsRepository } from "../analytics/analyticsRepository.js";
 import type { RunAiAnalysis } from "../../shared/types/run.js";
+import type { ConfigRepository } from "../config/configRepository.js";
 
 const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5.5";
 
@@ -82,9 +83,17 @@ const extractOutputText = (response: OpenAIResponsesResult) => {
 };
 
 export class RunAnalysisService {
-  constructor(private readonly analyticsRepository: AnalyticsRepository) {}
+  constructor(
+    private readonly analyticsRepository: AnalyticsRepository,
+    private readonly configRepository: ConfigRepository
+  ) {}
 
   async analyzeRun(runId: string): Promise<RunAiAnalysis> {
+    const config = this.configRepository.getConfig();
+    if (!config.allowExternalAiCalls) {
+      throw new Error("External AI API calls are disabled in Config.");
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY is not set. Restart the Electron app after updating .env.");

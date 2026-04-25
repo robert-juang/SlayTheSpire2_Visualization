@@ -95,5 +95,10 @@ CREATE TABLE IF NOT EXISTS import_jobs (
   error_json TEXT NOT NULL DEFAULT '[]'
 );
 
+CREATE TABLE IF NOT EXISTS app_config (
+  config_key TEXT PRIMARY KEY,
+  config_value TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_runs_player_ts ON runs(player_id, run_timestamp);
 CREATE INDEX IF NOT EXISTS idx_runs_character ON runs(character);

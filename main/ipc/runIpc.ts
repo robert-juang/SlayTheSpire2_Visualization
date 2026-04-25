@@ -4,6 +4,7 @@ import type {
   ProfileBootstrapResult,
   RunSummaryFilters
 } from "../../shared/types/ipc.js";
+import type { AppConfig } from "../../shared/types/run.js";
 import type { AppServices } from "../services/appServices.js";
 
 export const registerRunIpcHandlers = (services: AppServices) => {
@@ -55,5 +56,13 @@ export const registerRunIpcHandlers = (services: AppServices) => {
 
   ipcMain.handle("analytics:run-ai-analysis", async (_, runId: string) => {
     return services.runAnalysisService.analyzeRun(runId);
+  });
+
+  ipcMain.handle("config:get", () => {
+    return services.configRepository.getConfig();
+  });
+
+  ipcMain.handle("config:update", (_, config: AppConfig) => {
+    return services.configRepository.setConfig(config);
   });
 };

@@ -211,6 +211,77 @@ select {
   color: #9ca3af;
 }
 
+.config-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  background: #111827;
+}
+
+.config-copy h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.config-copy p {
+  margin: 0;
+  color: #9ca3af;
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+.config-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.config-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.config-toggle-track {
+  position: relative;
+  width: 54px;
+  height: 30px;
+  border-radius: 999px;
+  background: #243041;
+  border: 1px solid #334155;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.config-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  transition: transform 160ms ease;
+}
+
+.config-toggle input:checked + .config-toggle-track {
+  background: #1d4ed8;
+  border-color: #3b82f6;
+}
+
+.config-toggle input:checked + .config-toggle-track .config-toggle-thumb {
+  transform: translateX(24px);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -228,25 +299,20 @@ table {
   table-layout: fixed;
 }
 
-th,
-td {
-  border-bottom: 1px solid #1f2937;
-  text-align: left;
-  padding: 8px;
-  overflow-wrap: anywhere;
+.run-explorer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-th {
-  vertical-align: top;
-}
-
-.column-filter {
+.toolbar-filter {
   display: grid;
   gap: 7px;
-  min-width: 104px;
+  min-width: 180px;
 }
 
-.column-filter span {
+.toolbar-filter span {
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
@@ -254,9 +320,8 @@ th {
   letter-spacing: 0.02em;
 }
 
-.column-filter select {
+.toolbar-filter select {
   width: 100%;
-  max-width: 180px;
   appearance: none;
   border: 1px solid #334155;
   border-radius: 8px;
@@ -287,12 +352,12 @@ th {
     background-color 160ms ease;
 }
 
-.column-filter select:hover {
+.toolbar-filter select:hover {
   border-color: #4b5f7d;
   background-color: #1b2940;
 }
 
-.column-filter select:focus {
+.toolbar-filter select:focus {
   outline: none;
   border-color: #60a5fa;
   box-shadow:
@@ -300,9 +365,57 @@ th {
     0 0 0 3px rgba(96, 165, 250, 0.18);
 }
 
+th,
+td {
+  border-bottom: 1px solid #1f2937;
+  text-align: left;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+
+th {
+  vertical-align: top;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sort-button {
+  min-width: 28px;
+  padding: 4px 6px;
+  border-color: #334155;
+  background: #172131;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.sort-button:hover {
+  background: #1e293b;
+}
+
+.sort-button-active {
+  border-color: #3b82f6;
+  background: #1d3359;
+  color: #eff6ff;
+}
+
 .run-count {
   color: #9ca3af;
   margin-bottom: 10px;
+}
+
+.character-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .run-row {

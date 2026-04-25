@@ -6,6 +6,7 @@ import type {
   RunSummaryFilters
 } from "../shared/types/ipc.js";
 import type {
+  AppConfig,
   CharacterAscensionWinRateRow,
   ImportPreviewResult,
   OverviewMetrics,
@@ -37,7 +38,9 @@ const api = {
   getRunDetail: (runId: string): Promise<RunDetail | null> =>
     ipcRenderer.invoke("analytics:run-detail", runId),
   getRunAiAnalysis: (runId: string): Promise<RunAiAnalysis> =>
-    ipcRenderer.invoke("analytics:run-ai-analysis", runId)
+    ipcRenderer.invoke("analytics:run-ai-analysis", runId),
+  getConfig: (): Promise<AppConfig> => ipcRenderer.invoke("config:get"),
+  updateConfig: (config: AppConfig): Promise<AppConfig> => ipcRenderer.invoke("config:update", config)
 };
 
 contextBridge.exposeInMainWorld("sts2Api", api);

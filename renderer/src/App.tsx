@@ -4,9 +4,10 @@ import { OverviewPage } from "./pages/OverviewPage";
 import { RunExplorerPage } from "./pages/RunExplorerPage";
 import { ProfileSelectPage } from "./pages/ProfileSelectPage";
 import { LoadingPage } from "./pages/LoadingPage";
+import { ConfigPage } from "./pages/ConfigPage";
 import type { ProfileCandidate } from "@shared/types/run";
 
-const tabs = ["Overview", "Run Explorer"] as const;
+const tabs = ["Overview", "Run Explorer", "Config"] as const;
 type Tab = (typeof tabs)[number];
 type AppStage = "selectProfile" | "loadingProfile" | "ready";
 
@@ -102,6 +103,7 @@ export const App = () => {
       </nav>
       {activeTab === "Overview" && <OverviewPage />}
       {activeTab === "Run Explorer" && <RunExplorerPage />}
+      {activeTab === "Config" && <ConfigPage />}
     </main>
   );
 };

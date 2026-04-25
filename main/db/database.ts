@@ -41,6 +41,14 @@ CREATE TABLE IF NOT EXISTS run_metadata (
   act_summary_json TEXT NOT NULL,
   FOREIGN KEY(run_id) REFERENCES runs(id)
 );`
+  },
+  {
+    name: "003_app_config.sql",
+    sql: `
+CREATE TABLE IF NOT EXISTS app_config (
+  config_key TEXT PRIMARY KEY,
+  config_value TEXT NOT NULL
+);`
   }
 ];
 

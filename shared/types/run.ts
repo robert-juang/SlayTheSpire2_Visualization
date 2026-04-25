@@ -223,3 +223,7 @@ export type RunAiAnalysis = {
   userPrompt: string;
   analysis: string;
 };
+
+export type AppConfig = {
+  allowExternalAiCalls: boolean;
+};
