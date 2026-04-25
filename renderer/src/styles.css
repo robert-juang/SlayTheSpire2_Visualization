@@ -216,11 +216,24 @@ table {
   border-collapse: collapse;
 }
 
+.run-explorer-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.run-explorer-table {
+  min-width: 100%;
+  table-layout: fixed;
+}
+
 th,
 td {
   border-bottom: 1px solid #1f2937;
   text-align: left;
   padding: 8px;
+  overflow-wrap: anywhere;
 }
 
 th {

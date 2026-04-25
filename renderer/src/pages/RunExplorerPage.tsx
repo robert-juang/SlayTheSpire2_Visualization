@@ -209,159 +209,161 @@ export const RunExplorerPage = () => {
       {/* <div className="run-count">
         Showing {filteredRuns.length} of {runs.length} runs
       </div> */}
-      <table>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>
-                <div className="column-filter">
-                  <span>{column.label}</span>
-                  <select
-                    aria-label={`Filter ${column.label}`}
-                    value={filters[column.key] ?? ""}
-                    onChange={(event) =>
-                      setFilters((current) => ({
-                        ...current,
-                        [column.key]: event.target.value || undefined
-                      }))
-                    }
-                  >
-                    <option value="">All</option>
-                    {(filterOptions.get(column.key) ?? []).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredRuns.map((run) => (
-            <Fragment key={run.id}>
-              <tr
-                className="run-row"
-                onClick={() => setExpandedRunId((current) => (current === run.id ? null : run.id))}
-              >
-                {columns.map((column) => (
-                  <td key={column.key}>{column.render(run)}</td>
-                ))}
-              </tr>
-              {expandedRunId === run.id ? (
-                <tr className="run-detail-row" key={`${run.id}-detail`}>
-                  <td colSpan={columns.length}>
-                    {isDetailLoading ? (
-                      <div className="run-detail-panel">Loading run details...</div>
-                    ) : isDetailError ? (
-                      <div className="run-detail-panel detail-error">
-                        Could not load run details: {getErrorMessage(detailError)}
-                      </div>
-                    ) : expandedRunDetail ? (
-                      <div className="run-detail-panel">
-                        <div className="detail-group detail-group-wide">
-                          <div className="detail-header-row">
-                            <h3>AI Analysis</h3>
-                            <button
-                              className="detail-action-button"
-                              disabled={isAnalysisLoading}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                if (requestedAnalysisIds[run.id]) {
-                                  void refetchRunAnalysis();
-                                  return;
-                                }
-                                setRequestedAnalysisIds((current) => ({
-                                  ...current,
-                                  [run.id]: true
-                                }));
-                              }}
-                            >
-                              {isAnalysisLoading
-                                ? "loading..."
-                                : requestedAnalysisIds[run.id]
-                                  ? "Regenerate Analysis"
-                                  : "Generate AI Analysis"}
-                            </button>
-                          </div>
-                          {!requestedAnalysisIds[run.id] ? (
-                            <div className="detail-list">
-                              Generate an OpenAI summary for this run from the structured run JSON.
-                            </div>
-                          ) : isAnalysisLoading ? (
-                            <div className="ai-analysis-loading">
-                              <span className="loading-spinner" aria-hidden="true" />
-                              <span>loading...</span>
-                            </div>
-                          ) : isAnalysisError ? (
-                            <div className="detail-error">
-                              Could not generate AI analysis: {getErrorMessage(analysisError)}
-                            </div>
-                          ) : expandedRunAnalysis ? (
-                            <div className="ai-analysis-panel">
-                              <TypingText text={expandedRunAnalysis.analysis} />
-                            </div>
-                          ) : (
-                            <div className="detail-list">Analysis unavailable.</div>
-                          )}
-                        </div>
-                        <div className="detail-group">
-                          <h3>Cards Used</h3>
-                          <div className="detail-list">{expandedRunDetail.cardsUsed.join(", ") || "None recorded"}</div>
-                        </div>
-                        <div className="detail-group">
-                          <h3>Relics Obtained</h3>
-                          <div className="detail-list">
-                            {expandedRunDetail.relicsObtained.join(", ") || "None recorded"}
-                          </div>
-                        </div>
-                        <div className="detail-group">
-                          <h3>Gold</h3>
-                          <div className="detail-list">
-                            Gained {expandedRunDetail.goldGained} | Spent {expandedRunDetail.goldSpent} | Lost{" "}
-                            {expandedRunDetail.goldLost} | Stolen {expandedRunDetail.goldStolen} | Final{" "}
-                            {expandedRunDetail.finalGold ?? "Unknown"}
-                          </div>
-                        </div>
-                        <div className="detail-group">
-                          <h3>Normal Enemies</h3>
-                          <div className="detail-list">
-                            {expandedRunDetail.normalEnemies.join(", ") || "None recorded"}
-                          </div>
-                        </div>
-                        <div className="detail-group">
-                          <h3>Elites</h3>
-                          <div className="detail-list">{expandedRunDetail.elites.join(", ") || "None recorded"}</div>
-                        </div>
-                        <div className="detail-group detail-group-wide">
-                          <h3>Events</h3>
-                          {expandedRunDetail.events.length > 0 ? (
-                            <div className="event-list">
-                              {expandedRunDetail.events.map((event) => (
-                                <div className="event-item" key={`${event.act}-${event.floor}-${event.eventId}`}>
-                                  <strong>
-                                    Act {event.act}, Floor {event.floor}: {event.eventId}
-                                  </strong>
-                                  <span>{event.results.join(" | ")}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="detail-list">None recorded</div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="run-detail-panel">Run details unavailable.</div>
-                    )}
-                  </td>
+      <div className="run-explorer-table-wrap">
+        <table className="run-explorer-table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key}>
+                  <div className="column-filter">
+                    <span>{column.label}</span>
+                    <select
+                      aria-label={`Filter ${column.label}`}
+                      value={filters[column.key] ?? ""}
+                      onChange={(event) =>
+                        setFilters((current) => ({
+                          ...current,
+                          [column.key]: event.target.value || undefined
+                        }))
+                      }
+                    >
+                      <option value="">All</option>
+                      {(filterOptions.get(column.key) ?? []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRuns.map((run) => (
+              <Fragment key={run.id}>
+                <tr
+                  className="run-row"
+                  onClick={() => setExpandedRunId((current) => (current === run.id ? null : run.id))}
+                >
+                  {columns.map((column) => (
+                    <td key={column.key}>{column.render(run)}</td>
+                  ))}
                 </tr>
-              ) : null}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+                {expandedRunId === run.id ? (
+                  <tr className="run-detail-row" key={`${run.id}-detail`}>
+                    <td colSpan={columns.length}>
+                      {isDetailLoading ? (
+                        <div className="run-detail-panel">Loading run details...</div>
+                      ) : isDetailError ? (
+                        <div className="run-detail-panel detail-error">
+                          Could not load run details: {getErrorMessage(detailError)}
+                        </div>
+                      ) : expandedRunDetail ? (
+                        <div className="run-detail-panel">
+                          <div className="detail-group detail-group-wide">
+                            <div className="detail-header-row">
+                              <h3>AI Analysis</h3>
+                              <button
+                                className="detail-action-button"
+                                disabled={isAnalysisLoading}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (requestedAnalysisIds[run.id]) {
+                                    void refetchRunAnalysis();
+                                    return;
+                                  }
+                                  setRequestedAnalysisIds((current) => ({
+                                    ...current,
+                                    [run.id]: true
+                                  }));
+                                }}
+                              >
+                                {isAnalysisLoading
+                                  ? "loading..."
+                                  : requestedAnalysisIds[run.id]
+                                    ? "Regenerate Analysis"
+                                    : "Generate AI Analysis"}
+                              </button>
+                            </div>
+                            {!requestedAnalysisIds[run.id] ? (
+                              <div className="detail-list">
+                                Generate an OpenAI summary for this run from the structured run JSON.
+                              </div>
+                            ) : isAnalysisLoading ? (
+                              <div className="ai-analysis-loading">
+                                <span className="loading-spinner" aria-hidden="true" />
+                                <span>loading...</span>
+                              </div>
+                            ) : isAnalysisError ? (
+                              <div className="detail-error">
+                                Could not generate AI analysis: {getErrorMessage(analysisError)}
+                              </div>
+                            ) : expandedRunAnalysis ? (
+                              <div className="ai-analysis-panel">
+                                <TypingText text={expandedRunAnalysis.analysis} />
+                              </div>
+                            ) : (
+                              <div className="detail-list">Analysis unavailable.</div>
+                            )}
+                          </div>
+                          <div className="detail-group">
+                            <h3>Cards Used</h3>
+                            <div className="detail-list">{expandedRunDetail.cardsUsed.join(", ") || "None recorded"}</div>
+                          </div>
+                          <div className="detail-group">
+                            <h3>Relics Obtained</h3>
+                            <div className="detail-list">
+                              {expandedRunDetail.relicsObtained.join(", ") || "None recorded"}
+                            </div>
+                          </div>
+                          <div className="detail-group">
+                            <h3>Gold</h3>
+                            <div className="detail-list">
+                              Gained {expandedRunDetail.goldGained} | Spent {expandedRunDetail.goldSpent} | Lost{" "}
+                              {expandedRunDetail.goldLost} | Stolen {expandedRunDetail.goldStolen} | Final{" "}
+                              {expandedRunDetail.finalGold ?? "Unknown"}
+                            </div>
+                          </div>
+                          <div className="detail-group">
+                            <h3>Normal Enemies</h3>
+                            <div className="detail-list">
+                              {expandedRunDetail.normalEnemies.join(", ") || "None recorded"}
+                            </div>
+                          </div>
+                          <div className="detail-group">
+                            <h3>Elites</h3>
+                            <div className="detail-list">{expandedRunDetail.elites.join(", ") || "None recorded"}</div>
+                          </div>
+                          <div className="detail-group detail-group-wide">
+                            <h3>Events</h3>
+                            {expandedRunDetail.events.length > 0 ? (
+                              <div className="event-list">
+                                {expandedRunDetail.events.map((event) => (
+                                  <div className="event-item" key={`${event.act}-${event.floor}-${event.eventId}`}>
+                                    <strong>
+                                      Act {event.act}, Floor {event.floor}: {event.eventId}
+                                    </strong>
+                                    <span>{event.results.join(" | ")}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="detail-list">None recorded</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="run-detail-panel">Run details unavailable.</div>
+                      )}
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 };

@@ -19,6 +19,8 @@ const createWindow = async () => {
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    minWidth: 800,
+    minHeight: 530,
     webPreferences: {
       preload: path.resolve(__dirname, "preload.js"),
       contextIsolation: true,
