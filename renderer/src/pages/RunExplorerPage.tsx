@@ -92,6 +92,11 @@ const sortOptions = (values: string[]) =>
     return a.localeCompare(b);
   });
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  return "Unknown detail loading error";
+};
+
 export const RunExplorerPage = () => {
   const [filters, setFilters] = useState<FilterState>({});
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -99,9 +104,19 @@ export const RunExplorerPage = () => {
     queryKey: ["runs"],
     queryFn: () => window.sts2Api.getRuns()
   });
-  const { data: expandedRunDetail, isLoading: isDetailLoading } = useQuery({
+  const {
+    data: expandedRunDetail,
+    error: detailError,
+    isError: isDetailError,
+    isLoading: isDetailLoading
+  } = useQuery({
     queryKey: ["run-detail", expandedRunId],
-    queryFn: () => window.sts2Api.getRunDetail(expandedRunId ?? ""),
+    queryFn: () => {
+      if (!window.sts2Api.getRunDetail) {
+        throw new Error("Run detail API is not loaded. Restart the Electron app.");
+      }
+      return window.sts2Api.getRunDetail(expandedRunId ?? "");
+    },
     enabled: Boolean(expandedRunId)
   });
 
@@ -175,6 +190,10 @@ export const RunExplorerPage = () => {
                   <td colSpan={columns.length}>
                     {isDetailLoading ? (
                       <div className="run-detail-panel">Loading run details...</div>
+                    ) : isDetailError ? (
+                      <div className="run-detail-panel detail-error">
+                        Could not load run details: {getErrorMessage(detailError)}
+                      </div>
                     ) : expandedRunDetail ? (
                       <div className="run-detail-panel">
                         <div className="detail-group">

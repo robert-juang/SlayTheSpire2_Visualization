@@ -209,6 +209,10 @@ td {
   min-width: 0;
 }
 
+.detail-error {
+  color: #fecaca;
+}
+
 .detail-group-wide {
   grid-column: 1 / -1;
 }
