@@ -4,6 +4,7 @@ import type { RunSummaryFilters } from "../../shared/types/ipc.js";
 import type {
   CharacterAscensionWinRateRow,
   OverviewMetrics,
+  RunAnalysisPayload,
   PlayerComparisonRow,
   RunDetail,
   RunListItem
@@ -38,10 +39,23 @@ const buildFilterSql = (filters?: RunSummaryFilters) => {
 
 type RawRoom = {
   model_id?: string;
+  monster_ids?: string[];
   room_type?: string;
+  turns_taken?: number;
+};
+
+type RawCard = {
+  id?: string;
+  current_upgrade_level?: number;
+};
+
+type RawCardChoice = {
+  was_picked?: boolean;
+  card?: RawCard;
 };
 
 type RawPlayerStat = {
+  card_choices?: RawCardChoice[];
   cards_gained?: Array<{ id?: string }>;
   current_gold?: number;
   damage_taken?: number;
@@ -54,6 +68,8 @@ type RawPlayerStat = {
   max_hp_gained?: number;
   max_hp_lost?: number;
   relic_choices?: Array<{ choice?: string; was_picked?: boolean }>;
+  rest_site_choices?: string[];
+  upgraded_cards?: string[];
 };
 
 type RawMapNode = {
@@ -63,8 +79,14 @@ type RawMapNode = {
 
 type DetailRawRun = {
   seed?: string | number;
+  character?: string;
+  ascension?: number;
+  floor_reached?: number;
+  victory?: boolean;
+  win?: boolean;
   players?: Array<{
-    deck?: Array<{ id?: string; current_upgrade_level?: number }>;
+    character?: string;
+    deck?: RawCard[];
     relics?: Array<{ id?: string }>;
   }>;
   map_point_history?: RawMapNode[][];
@@ -85,6 +107,16 @@ const formatCard = (card: { id?: string; current_upgrade_level?: number }) => {
   if (!card.id) return undefined;
   const upgradeLevel = card.current_upgrade_level ?? 0;
   return upgradeLevel > 0 ? `${card.id}+${upgradeLevel}` : card.id;
+};
+
+const getPickedCard = (choice: RawCardChoice) => {
+  if (!choice.was_picked || !choice.card?.id) return undefined;
+  return formatCard(choice.card);
+};
+
+const getSkippedCard = (choice: RawCardChoice) => {
+  if (choice.was_picked || !choice.card?.id) return undefined;
+  return formatCard(choice.card);
 };
 
 const describeEventResult = (stat: RawPlayerStat) => {
@@ -279,6 +311,133 @@ export class AnalyticsRepository {
       normalEnemies: unique(normalEnemies),
       elites: unique(elites),
       events
+    };
+  }
+
+  getRunAnalysisPayload(runId: string): RunAnalysisPayload | null {
+    const row = this.db
+      .prepare(
+        `SELECT
+          CAST(id AS TEXT) AS id,
+          source_file AS sourceFile,
+          character,
+          ascension,
+          victory,
+          floor_reached AS floorReached
+        FROM runs
+        WHERE id = ?`
+      )
+      .get(runId) as
+      | {
+          id: string;
+          sourceFile: string;
+          character: string;
+          ascension: number;
+          victory: number;
+          floorReached: number;
+        }
+      | undefined;
+    if (!row) return null;
+
+    let raw: DetailRawRun;
+    try {
+      raw = JSON.parse(fs.readFileSync(row.sourceFile, "utf8")) as DetailRawRun;
+    } catch {
+      return null;
+    }
+
+    const firstPlayer = raw.players?.[0] ?? {};
+    const finalDeck = compact((firstPlayer.deck ?? []).map(formatCard));
+    const upgradedCardCount = (firstPlayer.deck ?? []).filter(
+      (card) => (card.current_upgrade_level ?? 0) > 0 && card.id
+    ).length;
+    const mapPointHistory = raw.map_point_history ?? [];
+    const nodes = mapPointHistory.flatMap((actNodes, actIndex) =>
+      actNodes.map((node, floorIndex) => ({
+        act: actIndex + 1,
+        floor: floorIndex + 1,
+        node,
+        room: node.rooms?.[0]
+      }))
+    );
+
+    const cardsPicked = nodes.flatMap(({ act, floor, node, room }) =>
+      (node.player_stats ?? []).flatMap((stat) => {
+        if (!stat.card_choices?.length) return [];
+        const pickedCard = stat.card_choices.map(getPickedCard).find(Boolean);
+        if (!pickedCard) return [];
+        return [
+          {
+            act,
+            floor,
+            roomType: room?.room_type ?? "unknown",
+            encounterId: room?.model_id,
+            pickedCard,
+            skippedCards: compact(stat.card_choices.map(getSkippedCard))
+          }
+        ];
+      })
+    );
+
+    const upgrades = nodes.flatMap(({ act, floor, node, room }) =>
+      (node.player_stats ?? []).flatMap((stat) => {
+        const cards = compact(stat.upgraded_cards ?? []);
+        if (cards.length === 0) return [];
+        return [
+          {
+            act,
+            floor,
+            source:
+              stat.rest_site_choices?.includes("SMITH") || room?.room_type === "rest_site"
+                ? "Rest Site"
+                : room?.room_type === "event"
+                  ? "Event"
+                  : room?.room_type ?? "Unknown",
+            cards
+          }
+        ];
+      })
+    );
+
+    const damageTakenByAct = mapPointHistory.map((actNodes, index) => ({
+      act: index + 1,
+      totalDamage: sum(
+        actNodes.flatMap((node) => (node.player_stats ?? []).map((stat) => stat.damage_taken))
+      )
+    }));
+
+    const damageTakenByEncounter = nodes.flatMap(({ act, floor, node, room }) =>
+      (node.player_stats ?? []).flatMap((stat) => {
+        if (!room || !["monster", "elite", "boss"].includes(room.room_type ?? "")) return [];
+        return [
+          {
+            act,
+            floor,
+            roomType: room.room_type ?? "unknown",
+            encounterId: room.model_id ?? "Unknown Encounter",
+            enemyIds: room.monster_ids ?? [],
+            turnsTaken: room.turns_taken ?? 0,
+            damageTaken: stat.damage_taken ?? 0
+          }
+        ];
+      })
+    );
+
+    return {
+      runId: row.id,
+      sourceFile: row.sourceFile,
+      character: firstPlayer.character ?? raw.character ?? row.character,
+      ascension: raw.ascension ?? row.ascension,
+      result: (raw.win ?? raw.victory ?? Boolean(row.victory)) ? "Win" : "Loss",
+      floorReached: raw.floor_reached ?? row.floorReached,
+      deckSize: finalDeck.length,
+      upgradedCardCount,
+      upgradeRatio: finalDeck.length > 0 ? Number((upgradedCardCount / finalDeck.length).toFixed(3)) : 0,
+      finalDeck,
+      cardsPicked,
+      upgrades,
+      damageTakenByAct,
+      damageTakenByEncounter
     };
   }
 }

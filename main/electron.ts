@@ -1,11 +1,14 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { registerRunIpcHandlers } from "./ipc/runIpc.js";
 import { createAppServices } from "./services/appServices.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 const isDev = process.env.NODE_ENV === "development";
 

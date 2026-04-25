@@ -52,4 +52,8 @@ export const registerRunIpcHandlers = (services: AppServices) => {
   ipcMain.handle("analytics:run-detail", (_, runId: string) => {
     return services.analyticsRepository.getRunDetail(runId);
   });
+
+  ipcMain.handle("analytics:run-ai-analysis", async (_, runId: string) => {
+    return services.runAnalysisService.analyzeRun(runId);
+  });
 };

@@ -167,3 +167,59 @@ export type RunDetail = {
   elites: string[];
   events: RunDetailEvent[];
 };
+
+export type RunAnalysisCardPick = {
+  act: number;
+  floor: number;
+  roomType: string;
+  encounterId?: string;
+  pickedCard: string;
+  skippedCards: string[];
+};
+
+export type RunAnalysisUpgrade = {
+  act: number;
+  floor: number;
+  source: string;
+  cards: string[];
+};
+
+export type RunAnalysisDamageByAct = {
+  act: number;
+  totalDamage: number;
+};
+
+export type RunAnalysisDamageByEncounter = {
+  act: number;
+  floor: number;
+  roomType: string;
+  encounterId: string;
+  enemyIds: string[];
+  turnsTaken: number;
+  damageTaken: number;
+};
+
+export type RunAnalysisPayload = {
+  runId: string;
+  sourceFile: string;
+  character: string;
+  ascension: number;
+  result: "Win" | "Loss";
+  floorReached: number;
+  deckSize: number;
+  upgradedCardCount: number;
+  upgradeRatio: number;
+  finalDeck: string[];
+  cardsPicked: RunAnalysisCardPick[];
+  upgrades: RunAnalysisUpgrade[];
+  damageTakenByAct: RunAnalysisDamageByAct[];
+  damageTakenByEncounter: RunAnalysisDamageByEncounter[];
+};
+
+export type RunAiAnalysis = {
+  runId: string;
+  model: string;
+  payload: RunAnalysisPayload;
+  userPrompt: string;
+  analysis: string;
+};

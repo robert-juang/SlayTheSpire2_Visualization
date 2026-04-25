@@ -11,6 +11,7 @@ import type {
   OverviewMetrics,
   ProfileCandidate,
   PlayerComparisonRow,
+  RunAiAnalysis,
   RunDetail,
   RunListItem
 } from "../shared/types/run.js";
@@ -34,7 +35,9 @@ const api = {
   getRuns: (filters?: RunSummaryFilters): Promise<RunListItem[]> =>
     ipcRenderer.invoke("analytics:runs", filters ?? {}),
   getRunDetail: (runId: string): Promise<RunDetail | null> =>
-    ipcRenderer.invoke("analytics:run-detail", runId)
+    ipcRenderer.invoke("analytics:run-detail", runId),
+  getRunAiAnalysis: (runId: string): Promise<RunAiAnalysis> =>
+    ipcRenderer.invoke("analytics:run-ai-analysis", runId)
 };
 
 contextBridge.exposeInMainWorld("sts2Api", api);

@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
 
@@ -97,12 +97,43 @@ const getErrorMessage = (error: unknown) => {
   return "Unknown detail loading error";
 };
 
+const TypingText = ({ text }: { text: string }) => {
+  const [visibleLength, setVisibleLength] = useState(0);
+
+  useEffect(() => {
+    setVisibleLength(0);
+    if (!text) return;
+
+    const step = Math.max(1, Math.ceil(text.length / 220));
+    let nextLength = 0;
+    let timeoutId: number | undefined;
+
+    const tick = () => {
+      nextLength = Math.min(text.length, nextLength + step);
+      setVisibleLength(nextLength);
+      if (nextLength < text.length) {
+        timeoutId = window.setTimeout(tick, 16);
+      }
+    };
+
+    timeoutId = window.setTimeout(tick, 16);
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [text]);
+
+  return <div className="ai-analysis-text">{text.slice(0, visibleLength)}</div>;
+};
+
 export const RunExplorerPage = () => {
   const [filters, setFilters] = useState<FilterState>({});
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [requestedAnalysisIds, setRequestedAnalysisIds] = useState<Record<string, boolean>>({});
   const { data, isLoading } = useQuery({
     queryKey: ["runs"],
-    queryFn: () => window.sts2Api.getRuns()
+    queryFn: () => window.sts2Api.getRuns(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
   });
   const {
     data: expandedRunDetail,
@@ -117,8 +148,41 @@ export const RunExplorerPage = () => {
       }
       return window.sts2Api.getRunDetail(expandedRunId ?? "");
     },
-    enabled: Boolean(expandedRunId)
+    enabled: Boolean(expandedRunId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
   });
+  const {
+    data: expandedRunAnalysis,
+    error: analysisError,
+    isError: isAnalysisError,
+    isLoading: isAnalysisLoading,
+    refetch: refetchRunAnalysis
+  } = useQuery({
+    queryKey: ["run-ai-analysis", expandedRunId],
+    queryFn: () => {
+      if (!window.sts2Api.getRunAiAnalysis) {
+        throw new Error("Run AI analysis API is not loaded. Restart the Electron app.");
+      }
+      return window.sts2Api.getRunAiAnalysis(expandedRunId ?? "");
+    },
+    enabled: Boolean(
+      expandedRunId && requestedAnalysisIds[expandedRunId] && !isDetailError && !isDetailLoading
+    ),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+
+  useEffect(() => {
+    if (!expandedRunId) return;
+    setRequestedAnalysisIds((current) => {
+      if (current[expandedRunId]) return current;
+      return {
+        ...current,
+        [expandedRunId]: true
+      };
+    });
+  }, [expandedRunId]);
 
   const runs = data ?? [];
   const filterOptions = useMemo(() => {
@@ -196,6 +260,52 @@ export const RunExplorerPage = () => {
                       </div>
                     ) : expandedRunDetail ? (
                       <div className="run-detail-panel">
+                        <div className="detail-group detail-group-wide">
+                          <div className="detail-header-row">
+                            <h3>AI Analysis</h3>
+                            <button
+                              className="detail-action-button"
+                              disabled={isAnalysisLoading}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (requestedAnalysisIds[run.id]) {
+                                  void refetchRunAnalysis();
+                                  return;
+                                }
+                                setRequestedAnalysisIds((current) => ({
+                                  ...current,
+                                  [run.id]: true
+                                }));
+                              }}
+                            >
+                              {isAnalysisLoading
+                                ? "loading..."
+                                : requestedAnalysisIds[run.id]
+                                  ? "Regenerate Analysis"
+                                  : "Generate AI Analysis"}
+                            </button>
+                          </div>
+                          {!requestedAnalysisIds[run.id] ? (
+                            <div className="detail-list">
+                              Generate an OpenAI summary for this run from the structured run JSON.
+                            </div>
+                          ) : isAnalysisLoading ? (
+                            <div className="ai-analysis-loading">
+                              <span className="loading-spinner" aria-hidden="true" />
+                              <span>loading...</span>
+                            </div>
+                          ) : isAnalysisError ? (
+                            <div className="detail-error">
+                              Could not generate AI analysis: {getErrorMessage(analysisError)}
+                            </div>
+                          ) : expandedRunAnalysis ? (
+                            <div className="ai-analysis-panel">
+                              <TypingText text={expandedRunAnalysis.analysis} />
+                            </div>
+                          ) : (
+                            <div className="detail-list">Analysis unavailable.</div>
+                          )}
+                        </div>
                         <div className="detail-group">
                           <h3>Cards Used</h3>
                           <div className="detail-list">{expandedRunDetail.cardsUsed.join(", ") || "None recorded"}</div>
