@@ -4,27 +4,27 @@ type ProfileSelectPageProps = {
   profiles: ProfileCandidate[];
   onSelect: (profile: ProfileCandidate) => void;
   loading: boolean;
+  selectedProfileId: string | null;
 };
 
 export const ProfileSelectPage = ({
   profiles,
   onSelect,
-  loading
+  loading,
+  selectedProfileId
 }: ProfileSelectPageProps) => (
   <section className="page">
-    <h2>Select Profile</h2>
-    <p>Detected profiles for this macOS user. Pick one to load run data.</p>
     <div className="profile-list">
       {profiles.map((profile) => (
         <button
           key={profile.id}
-          className="profile-item"
+          className={`profile-item ${selectedProfileId === profile.id ? "profile-item-selected" : ""}`}
           onClick={() => onSelect(profile)}
           disabled={loading}
         >
-          <strong>{profile.displayName}</strong>
-          <span>{profile.runFileCount} .run files</span>
-          <small>{profile.steamPath}</small>
+          <strong className="profile-item-title">{profile.displayName}</strong>
+          <span className="profile-item-count">{profile.runFileCount} Runs</span>
+          {/* <small>{profile.steamPath}</small> */}
         </button>
       ))}
       {profiles.length === 0 && <p>No profile run data found in Steam folders.</p>}

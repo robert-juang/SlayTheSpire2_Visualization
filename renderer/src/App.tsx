@@ -15,6 +15,7 @@ export const App = () => {
   const [stage, setStage] = useState<AppStage>("selectProfile");
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadDetail, setLoadDetail] = useState("Waiting for selection...");
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   const profilesQuery = useQuery({
     queryKey: ["profiles"],
@@ -49,7 +50,7 @@ export const App = () => {
 
   const headerText = useMemo(() => {
     if (stage === "ready") return "Slay the Spire 2 Visualizer";
-    return "Slay the Spire 2 Data Loader";
+    return "Slay the Spire 2 Visualizer";
   }, [stage]);
 
   if (profilesQuery.isLoading) {
@@ -66,8 +67,12 @@ export const App = () => {
         <h1>{headerText}</h1>
         <ProfileSelectPage
           profiles={profilesQuery.data ?? []}
-          onSelect={(profile) => bootstrapMutation.mutate(profile)}
+          onSelect={(profile) => {
+            setSelectedProfileId(profile.id);
+            bootstrapMutation.mutate(profile);
+          }}
           loading={bootstrapMutation.isPending}
+          selectedProfileId={selectedProfileId}
         />
       </main>
     );
