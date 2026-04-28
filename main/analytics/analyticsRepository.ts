@@ -7,7 +7,9 @@ import type {
   RunAnalysisPayload,
   PlayerComparisonRow,
   RunDetail,
-  RunListItem
+  RunListItem,
+  RunListPage,
+  RunFilterOptions
 } from "../../shared/types/run.js";
 
 const buildFilterSql = (filters?: RunSummaryFilters) => {
@@ -21,6 +23,10 @@ const buildFilterSql = (filters?: RunSummaryFilters) => {
   if (filters?.character) {
     where.push("r.character = @character");
     params.character = filters.character;
+  }
+  if (filters?.ascension !== undefined) {
+    where.push("r.ascension = @ascension");
+    params.ascension = filters.ascension;
   }
   if (filters?.fromTimestamp) {
     where.push("r.run_timestamp >= @fromTimestamp");
@@ -206,9 +212,25 @@ export class AnalyticsRepository {
       .all() as CharacterAscensionWinRateRow[];
   }
 
-  getRuns(filters?: RunSummaryFilters): RunListItem[] {
+  getRuns(filters?: RunSummaryFilters): RunListPage {
     const { clause, params } = buildFilterSql(filters);
-    return this.db
+    const pagingParams = {
+      ...params,
+      limit: filters?.limit ?? 50,
+      offset: filters?.offset ?? 0
+    };
+
+    const totalRow = this.db
+      .prepare(
+        `SELECT COUNT(*) AS totalRuns
+        FROM runs r
+        JOIN players p ON p.id = r.player_id
+        LEFT JOIN run_metadata m ON m.run_id = r.id
+        ${clause}`
+      )
+      .get(params) as { totalRuns: number } | undefined;
+
+    const runs = this.db
       .prepare(
         `SELECT
           CAST(r.id AS TEXT) AS id,
@@ -229,9 +251,15 @@ export class AnalyticsRepository {
         LEFT JOIN run_metadata m ON m.run_id = r.id
         ${clause}
         ORDER BY r.run_timestamp DESC
-        LIMIT 500`
+        LIMIT @limit
+        OFFSET @offset`
       )
-      .all(params) as RunListItem[];
+      .all(pagingParams) as RunListItem[];
+
+    return {
+      runs,
+      totalRuns: totalRow?.totalRuns ?? 0
+    };
   }
 
   getRunDetail(runId: string): RunDetail | null {
@@ -311,6 +339,20 @@ export class AnalyticsRepository {
       normalEnemies: unique(normalEnemies),
       elites: unique(elites),
       events
+    };
+  }
+
+  getRunFilterOptions(): RunFilterOptions {
+    const characters = this.db
+      .prepare("SELECT DISTINCT character FROM runs ORDER BY character ASC")
+      .all() as Array<{ character: string }>;
+    const ascensions = this.db
+      .prepare("SELECT DISTINCT ascension FROM runs ORDER BY ascension ASC")
+      .all() as Array<{ ascension: number }>;
+
+    return {
+      characters: characters.map((row) => row.character),
+      ascensions: ascensions.map((row) => row.ascension)
     };
   }
 

@@ -14,8 +14,11 @@ export type ImportResponse = {
 export type RunSummaryFilters = {
   playerName?: string;
   character?: string;
+  ascension?: number;
   fromTimestamp?: number;
   toTimestamp?: number;
+  limit?: number;
+  offset?: number;
 };
 
 export type ProfileBootstrapResult = {

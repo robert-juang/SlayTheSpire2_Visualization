@@ -145,6 +145,16 @@ export type RunListItem = {
   killedByEncounter?: string;
 };
 
+export type RunListPage = {
+  runs: RunListItem[];
+  totalRuns: number;
+};
+
+export type RunFilterOptions = {
+  characters: string[];
+  ascensions: number[];
+};
+
 export type RunDetailEvent = {
   act: number;
   floor: number;

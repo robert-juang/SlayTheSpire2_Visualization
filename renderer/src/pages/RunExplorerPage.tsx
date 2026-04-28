@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
 import { getCharacterIconUrl } from "../assets/characterIconMap";
 
-type SortDirection = "asc" | "desc";
-type SortKey = "id" | "ascension" | "floorReached" | "durationMinutes";
+type SortDirection = "asc" | "desc" | null;
+type SortKey = "id" | "ascension";
 
 const columns: Array<{
   key: string;
@@ -52,34 +52,12 @@ const columns: Array<{
     render: (run) => (run.victory ? "Yes" : "No")
   },
   {
-    key: "floorReached",
-    label: "Floor",
-    value: (run) => String(run.floorReached),
-    render: (run) => run.floorReached,
-    sortValue: (run) => run.floorReached
-  },
-  {
     key: "killedByEncounter",
     label: "Lost To",
     value: (run) => run.killedByEncounter ?? "(None)",
     render: (run) => run.killedByEncounter ?? ""
-  },
-  {
-    key: "durationMinutes",
-    label: "Duration (m)",
-    value: (run) => String(Math.round(run.durationSeconds / 60)),
-    render: (run) => Math.round(run.durationSeconds / 60),
-    sortValue: (run) => Math.round(run.durationSeconds / 60)
   }
 ];
-
-const sortOptions = (values: string[]) =>
-  [...values].sort((a, b) => {
-    const aNumber = Number(a);
-    const bNumber = Number(b);
-    if (!Number.isNaN(aNumber) && !Number.isNaN(bNumber)) return aNumber - bNumber;
-    return a.localeCompare(b);
-  });
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
@@ -114,22 +92,51 @@ const TypingText = ({ text }: { text: string }) => {
   return <div className="ai-analysis-text">{text.slice(0, visibleLength)}</div>;
 };
 
+const getColumnClassName = (key: string) => {
+  if (key === "id") return "column-id";
+  if (key === "character") return "column-character";
+  if (key === "__spacer") return "column-spacer";
+  return "column-metric";
+};
+
+const visibleColumns = [
+  columns[0],
+  columns[1],
+  { key: "__spacer", label: "", render: () => null },
+  ...columns.slice(2)
+] as const;
+
+const PAGE_SIZE = 50;
+
 export const RunExplorerPage = () => {
   const [selectedCharacter, setSelectedCharacter] = useState("");
   const [selectedAscension, setSelectedAscension] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [requestedAnalysisIds, setRequestedAnalysisIds] = useState<Record<string, boolean>>({});
   const { data, isLoading } = useQuery({
-    queryKey: ["runs"],
-    queryFn: () => window.sts2Api.getRuns(),
+    queryKey: ["runs", selectedCharacter, selectedAscension, currentPage],
+    queryFn: () =>
+      window.sts2Api.getRuns({
+        character: selectedCharacter || undefined,
+        ascension: selectedAscension ? Number(selectedAscension) : undefined,
+        limit: PAGE_SIZE,
+        offset: (currentPage - 1) * PAGE_SIZE
+      }),
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
   const { data: appConfig } = useQuery({
     queryKey: ["app-config"],
     queryFn: () => window.sts2Api.getConfig(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+  const { data: filterOptionsData } = useQuery({
+    queryKey: ["run-filter-options"],
+    queryFn: () => window.sts2Api.getRunFilterOptions(),
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
@@ -182,24 +189,23 @@ export const RunExplorerPage = () => {
     });
   }, [appConfig?.allowExternalAiCalls, expandedRunId]);
 
-  const runs = data ?? [];
-  const characterOptions = useMemo(
-    () => sortOptions([...new Set(runs.map((run) => run.character))]),
-    [runs]
-  );
+  useEffect(() => {
+    setCurrentPage(1);
+    setExpandedRunId(null);
+  }, [selectedAscension, selectedCharacter]);
+
+  const runs = data?.runs ?? [];
+  const totalRuns = data?.totalRuns ?? 0;
+  const characterOptions = filterOptionsData?.characters ?? [];
   const ascensionOptions = useMemo(
-    () => sortOptions([...new Set(runs.map((run) => String(run.ascension)))]),
-    [runs]
+    () => (filterOptionsData?.ascensions ?? []).map((ascension) => String(ascension)),
+    [filterOptionsData?.ascensions]
   );
 
   const filteredRuns = useMemo(() => {
-    const nextRuns = runs.filter((run) => {
-      if (selectedCharacter && run.character !== selectedCharacter) return false;
-      if (selectedAscension && String(run.ascension) !== selectedAscension) return false;
-      return true;
-    });
+    const nextRuns = runs;
 
-    if (!sortKey) return nextRuns;
+    if (!sortKey || !sortDirection) return nextRuns;
 
     const sortedRuns = [...nextRuns];
     const sortColumn = columns.find((column) => column.key === sortKey);
@@ -214,12 +220,34 @@ export const RunExplorerPage = () => {
     return sortedRuns;
   }, [runs, selectedAscension, selectedCharacter, sortDirection, sortKey]);
 
+  const totalPages = Math.max(1, Math.ceil(totalRuns / PAGE_SIZE));
+  const rangeStart = totalRuns === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = totalRuns === 0 ? 0 : rangeStart + filteredRuns.length - 1;
+  const paginationPages = useMemo(() => {
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + 4);
+    const adjustedStart = Math.max(1, endPage - 4);
+    return Array.from({ length: endPage - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [currentPage, totalPages]);
+
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDirection("desc");
       return;
     }
-    setSortKey(key);
+
+    if (sortDirection === "desc") {
+      setSortDirection("asc");
+      return;
+    }
+
+    if (sortDirection === "asc") {
+      setSortKey(null);
+      setSortDirection(null);
+      return;
+    }
+
     setSortDirection("desc");
   };
 
@@ -251,23 +279,35 @@ export const RunExplorerPage = () => {
           </select>
         </label>
       </div>
+      <div className="run-explorer-summary">
+        #{rangeStart.toLocaleString()} ~ #{rangeEnd.toLocaleString()} / Total {totalRuns.toLocaleString()} Runs
+      </div>
       <div className="run-explorer-table-wrap">
         <table className="run-explorer-table">
+          <colgroup>
+            {visibleColumns.map((column) => (
+              <col key={column.key} className={getColumnClassName(column.key)} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
-              {columns.map((column) => (
-                <th key={column.key}>
+              {visibleColumns.map((column) => (
+                <th key={column.key} className={getColumnClassName(column.key)}>
                   <div className="column-header">
-                    <span>{column.label}</span>
-                    {column.sortValue ? (
+                    {"sortValue" in column && column.sortValue ? (
                       <button
                         className={`sort-button ${sortKey === column.key ? "sort-button-active" : ""}`}
                         onClick={() => toggleSort(column.key as SortKey)}
-                        title={`Sort ${column.label} ${sortKey === column.key && sortDirection === "asc" ? "descending" : "ascending"}`}
+                        title={`Sort ${column.label}`}
                       >
-                        {sortKey === column.key ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                        {sortKey === column.key
+                          ? sortDirection === "asc"
+                            ? "↑"
+                            : "↓"
+                          : "↕"}
                       </button>
                     ) : null}
+                    <span>{column.label}</span>
                   </div>
                 </th>
               ))}
@@ -280,13 +320,15 @@ export const RunExplorerPage = () => {
                   className="run-row"
                   onClick={() => setExpandedRunId((current) => (current === run.id ? null : run.id))}
                 >
-                  {columns.map((column) => (
-                    <td key={column.key}>{column.render(run)}</td>
+                  {visibleColumns.map((column) => (
+                    <td key={column.key} className={getColumnClassName(column.key)}>
+                      {"render" in column ? column.render(run) : null}
+                    </td>
                   ))}
                 </tr>
                 {expandedRunId === run.id ? (
                   <tr className="run-detail-row" key={`${run.id}-detail`}>
-                    <td colSpan={columns.length}>
+                    <td colSpan={visibleColumns.length}>
                       {isDetailLoading ? (
                         <div className="run-detail-panel">Loading run details...</div>
                       ) : isDetailError ? (
@@ -406,6 +448,31 @@ export const RunExplorerPage = () => {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="pagination-bar">
+        <button
+          className="pagination-button"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+        >
+          Prev
+        </button>
+        {paginationPages.map((page) => (
+          <button
+            key={page}
+            className={`pagination-button ${page === currentPage ? "pagination-button-active" : ""}`}
+            onClick={() => setCurrentPage(page)}
+          >
+            {page}
+          </button>
+        ))}
+        <button
+          className="pagination-button"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+        >
+          Next
+        </button>
       </div>
     </section>
   );

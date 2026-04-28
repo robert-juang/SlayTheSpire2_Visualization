@@ -299,11 +299,33 @@ table {
   table-layout: fixed;
 }
 
+.run-explorer-table col.column-id {
+  width: 72px;
+}
+
+.run-explorer-table col.column-character {
+  width: 98px;
+}
+
+.run-explorer-table col.column-spacer {
+  width: auto;
+}
+
+.run-explorer-table col.column-metric {
+  width: 120px;
+}
+
 .run-explorer-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.run-explorer-summary {
+  margin-bottom: 12px;
+  color: #cbd5e1;
+  font-size: 14px;
 }
 
 .toolbar-filter {
@@ -379,11 +401,38 @@ th {
   color: #cbd5e1;
 }
 
+th.column-id,
+td.column-id,
+th.column-character,
+td.column-character {
+  text-align: left;
+}
+
+th.column-spacer,
+td.column-spacer {
+  padding: 0;
+  border-bottom: 1px solid #1f2937;
+}
+
+th.column-metric,
+td.column-metric {
+  text-align: center;
+}
+
 .column-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
+}
+
+th.column-id .column-header,
+th.column-character .column-header {
+  justify-content: flex-start;
+}
+
+th.column-spacer .column-header {
+  justify-content: flex-start;
 }
 
 .sort-button {
@@ -538,6 +587,37 @@ th {
   color: #dbeafe;
   line-height: 1.65;
   white-space: pre-wrap;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  min-width: 38px;
+  padding: 7px 10px;
+  border-color: #334155;
+  background: #172131;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.pagination-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pagination-button-active {
+  border-color: #3b82f6;
+  background: #1d4ed8;
+  color: #eff6ff;
 }
 
 @keyframes spin {

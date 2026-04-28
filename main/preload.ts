@@ -14,7 +14,8 @@ import type {
   PlayerComparisonRow,
   RunAiAnalysis,
   RunDetail,
-  RunListItem
+  RunFilterOptions,
+  RunListPage
 } from "../shared/types/run.js";
 
 const api = {
@@ -33,8 +34,10 @@ const api = {
     ipcRenderer.invoke("analytics:players"),
   getWinRateByAscension: (): Promise<CharacterAscensionWinRateRow[]> =>
     ipcRenderer.invoke("analytics:winrate-by-ascension"),
-  getRuns: (filters?: RunSummaryFilters): Promise<RunListItem[]> =>
+  getRuns: (filters?: RunSummaryFilters): Promise<RunListPage> =>
     ipcRenderer.invoke("analytics:runs", filters ?? {}),
+  getRunFilterOptions: (): Promise<RunFilterOptions> =>
+    ipcRenderer.invoke("analytics:run-filter-options"),
   getRunDetail: (runId: string): Promise<RunDetail | null> =>
     ipcRenderer.invoke("analytics:run-detail", runId),
   getRunAiAnalysis: (runId: string): Promise<RunAiAnalysis> =>
