@@ -1,10 +1,21 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RunListItem } from "@shared/types/run";
-import { getCharacterIconUrl } from "../assets/characterIconMap";
+import {
+  getCharacterDisplayName,
+  getCharacterIconUrl,
+  getCharacterPortraitUrl
+} from "../assets/characterIconMap";
 
 type SortDirection = "asc" | "desc" | null;
-type SortKey = "id" | "ascension";
+type SortKey = "id" | "ascension" | "runTimestamp";
+
+const formatRunPlayedAt = (runTimestamp: number) =>
+  new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date(runTimestamp * 1000));
 
 const columns: Array<{
   key: string;
@@ -44,6 +55,13 @@ const columns: Array<{
     value: (run) => String(run.ascension),
     render: (run) => run.ascension,
     sortValue: (run) => run.ascension
+  },
+  {
+    key: "runTimestamp",
+    label: "Played",
+    value: (run) => formatRunPlayedAt(run.runTimestamp),
+    render: (run) => formatRunPlayedAt(run.runTimestamp),
+    sortValue: (run) => run.runTimestamp
   },
   {
     key: "victory",
@@ -110,18 +128,18 @@ const PAGE_SIZE = 50;
 
 export const RunExplorerPage = () => {
   const [selectedCharacter, setSelectedCharacter] = useState("");
-  const [selectedAscension, setSelectedAscension] = useState("");
+  const [isCharacterMenuOpen, setIsCharacterMenuOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [requestedAnalysisIds, setRequestedAnalysisIds] = useState<Record<string, boolean>>({});
+  const characterMenuRef = useRef<HTMLDivElement | null>(null);
   const { data, isLoading } = useQuery({
-    queryKey: ["runs", selectedCharacter, selectedAscension, currentPage],
+    queryKey: ["runs", selectedCharacter, currentPage],
     queryFn: () =>
       window.sts2Api.getRuns({
         character: selectedCharacter || undefined,
-        ascension: selectedAscension ? Number(selectedAscension) : undefined,
         limit: PAGE_SIZE,
         offset: (currentPage - 1) * PAGE_SIZE
       }),
@@ -192,15 +210,30 @@ export const RunExplorerPage = () => {
   useEffect(() => {
     setCurrentPage(1);
     setExpandedRunId(null);
-  }, [selectedAscension, selectedCharacter]);
+  }, [selectedCharacter]);
+
+  useEffect(() => {
+    if (!isCharacterMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!characterMenuRef.current?.contains(event.target as Node)) {
+        setIsCharacterMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => window.removeEventListener("mousedown", handlePointerDown);
+  }, [isCharacterMenuOpen]);
 
   const runs = data?.runs ?? [];
   const totalRuns = data?.totalRuns ?? 0;
   const characterOptions = filterOptionsData?.characters ?? [];
-  const ascensionOptions = useMemo(
-    () => (filterOptionsData?.ascensions ?? []).map((ascension) => String(ascension)),
-    [filterOptionsData?.ascensions]
-  );
+  const selectedCharacterPortraitUrl = selectedCharacter
+    ? getCharacterPortraitUrl(selectedCharacter)
+    : undefined;
+  const selectedCharacterLabel = selectedCharacter
+    ? getCharacterDisplayName(selectedCharacter)
+    : "All Characters";
 
   const filteredRuns = useMemo(() => {
     const nextRuns = runs;
@@ -218,7 +251,7 @@ export const RunExplorerPage = () => {
     });
 
     return sortedRuns;
-  }, [runs, selectedAscension, selectedCharacter, sortDirection, sortKey]);
+  }, [runs, selectedCharacter, sortDirection, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(totalRuns / PAGE_SIZE));
   const rangeStart = totalRuns === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
@@ -258,25 +291,62 @@ export const RunExplorerPage = () => {
       <div className="run-explorer-toolbar">
         <label className="toolbar-filter">
           <span>Character</span>
-          <select value={selectedCharacter} onChange={(event) => setSelectedCharacter(event.target.value)}>
-            <option value="">All Characters</option>
-            {characterOptions.map((character) => (
-              <option key={character} value={character}>
-                {character}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="toolbar-filter">
-          <span>Ascension</span>
-          <select value={selectedAscension} onChange={(event) => setSelectedAscension(event.target.value)}>
-            <option value="">All Ascensions</option>
-            {ascensionOptions.map((ascension) => (
-              <option key={ascension} value={ascension}>
-                {ascension}
-              </option>
-            ))}
-          </select>
+          <div className="character-filter-menu" ref={characterMenuRef}>
+            <button
+              type="button"
+              className={`character-filter-trigger ${isCharacterMenuOpen ? "character-filter-trigger-open" : ""}`}
+              onClick={() => setIsCharacterMenuOpen((current) => !current)}
+            >
+              {selectedCharacterPortraitUrl ? (
+                <img
+                  className="character-filter-portrait"
+                  src={selectedCharacterPortraitUrl}
+                  alt={selectedCharacterLabel}
+                />
+              ) : (
+                <span className="character-filter-portrait character-filter-portrait-empty">All</span>
+              )}
+              <span className="character-filter-trigger-label">{selectedCharacterLabel}</span>
+              <span className="character-filter-trigger-caret" aria-hidden="true">
+                ▾
+              </span>
+            </button>
+            {isCharacterMenuOpen ? (
+              <div className="character-filter-dropdown">
+                <button
+                  type="button"
+                  className={`character-filter-option ${selectedCharacter === "" ? "character-filter-option-active" : ""}`}
+                  onClick={() => {
+                    setSelectedCharacter("");
+                    setIsCharacterMenuOpen(false);
+                  }}
+                >
+                  <span className="character-filter-portrait character-filter-portrait-empty">All</span>
+                  <span>All Characters</span>
+                </button>
+                {characterOptions.map((character) => (
+                  <button
+                    key={character}
+                    type="button"
+                    className={`character-filter-option ${
+                      selectedCharacter === character ? "character-filter-option-active" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedCharacter(character);
+                      setIsCharacterMenuOpen(false);
+                    }}
+                  >
+                    <img
+                      className="character-filter-portrait"
+                      src={getCharacterPortraitUrl(character)}
+                      alt={getCharacterDisplayName(character)}
+                    />
+                    <span>{getCharacterDisplayName(character)}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </label>
       </div>
       <div className="run-explorer-summary">
@@ -293,22 +363,29 @@ export const RunExplorerPage = () => {
             <tr>
               {visibleColumns.map((column) => (
                 <th key={column.key} className={getColumnClassName(column.key)}>
-                  <div className="column-header">
-                    {"sortValue" in column && column.sortValue ? (
-                      <button
-                        className={`sort-button ${sortKey === column.key ? "sort-button-active" : ""}`}
-                        onClick={() => toggleSort(column.key as SortKey)}
-                        title={`Sort ${column.label}`}
-                      >
+                  {"sortValue" in column && column.sortValue ? (
+                    <button
+                      type="button"
+                      className={`column-header column-sort-trigger ${
+                        sortKey === column.key ? "column-sort-trigger-active" : ""
+                      }`}
+                      onClick={() => toggleSort(column.key as SortKey)}
+                      title={`Sort ${column.label}`}
+                    >
+                      <span>{column.label}</span>
+                      <span className="column-sort-indicator" aria-hidden="true">
                         {sortKey === column.key
                           ? sortDirection === "asc"
                             ? "↑"
                             : "↓"
                           : "↕"}
-                      </button>
-                    ) : null}
-                    <span>{column.label}</span>
-                  </div>
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="column-header">
+                      <span>{column.label}</span>
+                    </div>
+                  )}
                 </th>
               ))}
             </tr>
