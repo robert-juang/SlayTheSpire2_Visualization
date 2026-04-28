@@ -31,6 +31,14 @@ body {
   margin-bottom: 16px;
 }
 
+.tabs-menu {
+  padding: 6px;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  background: #0f172a;
+  width: fit-content;
+}
+
 button {
   border: 1px solid #374151;
   background: #1f2937;
@@ -176,11 +184,18 @@ select {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 12px;
 }
 
+.app-summary-strip {
+  margin-bottom: 16px;
+}
+
 .metric-card {
+  display: grid;
+  justify-items: center;
+  text-align: center;
   border: 1px solid #1f2937;
   background: #111827;
   border-radius: 12px;
@@ -189,7 +204,7 @@ select {
 
 .metric-label {
   color: #9ca3af;
-  margin-bottom: 4px;
+  margin-top: 6px;
 }
 
 .metric-value {
@@ -197,11 +212,14 @@ select {
 }
 
 .chart-panel {
-  margin-top: 18px;
   border: 1px solid #1f2937;
   background: #111827;
   border-radius: 8px;
   padding: 14px;
+}
+
+.chart-panel-overview {
+  margin-top: 0;
 }
 
 .chart-empty {

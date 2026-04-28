@@ -159,9 +159,11 @@ export class AnalyticsRepository {
           COUNT(*) AS totalRuns,
           AVG(CAST(r.victory AS REAL)) AS winRate,
           AVG(CAST(r.floor_reached AS REAL)) AS averageFloor,
-          AVG(CAST(r.duration_s AS REAL)) AS averageDurationSeconds
+          AVG(CAST(r.duration_s AS REAL)) AS averageDurationSeconds,
+          AVG(CAST(m.deck_size AS REAL)) AS averageDeckSize
         FROM runs r
         JOIN players p ON p.id = r.player_id
+        LEFT JOIN run_metadata m ON m.run_id = r.id
         ${clause}`
       )
       .get(params) as
@@ -170,6 +172,7 @@ export class AnalyticsRepository {
           winRate: number | null;
           averageFloor: number | null;
           averageDurationSeconds: number | null;
+          averageDeckSize: number | null;
         }
       | undefined;
 
@@ -177,7 +180,8 @@ export class AnalyticsRepository {
       totalRuns: row?.totalRuns ?? 0,
       winRate: row?.winRate ?? 0,
       averageFloor: row?.averageFloor ?? 0,
-      averageDurationSeconds: row?.averageDurationSeconds ?? 0
+      averageDurationSeconds: row?.averageDurationSeconds ?? 0,
+      averageDeckSize: row?.averageDeckSize ?? 0
     };
   }
 

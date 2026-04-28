@@ -113,6 +113,7 @@ export type OverviewMetrics = {
   winRate: number;
   averageFloor: number;
   averageDurationSeconds: number;
+  averageDeckSize: number;
 };
 
 export type PlayerComparisonRow = {

@@ -5,11 +5,14 @@ import { RunExplorerPage } from "./pages/RunExplorerPage";
 import { ProfileSelectPage } from "./pages/ProfileSelectPage";
 import { LoadingPage } from "./pages/LoadingPage";
 import { ConfigPage } from "./pages/ConfigPage";
+import { MetricCard } from "./components/charts/MetricCard";
 import type { ProfileCandidate } from "@shared/types/run";
 
 const tabs = ["Overview", "Run Explorer", "Config"] as const;
 type Tab = (typeof tabs)[number];
 type AppStage = "selectProfile" | "loadingProfile" | "ready";
+
+const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
@@ -21,6 +24,11 @@ export const App = () => {
   const profilesQuery = useQuery({
     queryKey: ["profiles"],
     queryFn: () => window.sts2Api.listProfiles()
+  });
+  const overviewQuery = useQuery({
+    queryKey: ["overview-shell-v2"],
+    queryFn: () => window.sts2Api.getOverview(),
+    enabled: stage === "ready"
   });
 
   const bootstrapMutation = useMutation({
@@ -90,7 +98,19 @@ export const App = () => {
   return (
     <main className="container">
       <h1>{headerText}</h1>
-      <nav className="tabs">
+      <section className="app-summary-strip">
+        <div className="metric-grid">
+          <MetricCard label="Runs" value={String(overviewQuery.data?.totalRuns ?? 0)} />
+          <MetricCard label="Win Rate" value={formatPercent(overviewQuery.data?.winRate ?? 0)} />
+          <MetricCard label="Avg Floor" value={(overviewQuery.data?.averageFloor ?? 0).toFixed(1)} />
+          <MetricCard label="Avg Deck Size" value={(overviewQuery.data?.averageDeckSize ?? 0).toFixed(1)} />
+          <MetricCard
+            label="Avg Duration"
+            value={`${Math.round((overviewQuery.data?.averageDurationSeconds ?? 0) / 60)} min`}
+          />
+        </div>
+      </section>
+      <nav className="tabs tabs-menu">
         {tabs.map((tab) => (
           <button
             key={tab}
